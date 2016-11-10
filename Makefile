@@ -12,7 +12,7 @@ AWS_REGION ?= us-west-2
 COREOS_CHANNEL ?= stable
 COREOS_VM_TYPE ?= hvm
 
-CLUSTER_NAME ?= test
+CLUSTER_NAME ?= tests3
 AWS_EC2_KEY_NAME ?= kz8s-$(CLUSTER_NAME)
 
 INTERNAL_TLD := ${CLUSTER_NAME}.kz8s
@@ -35,6 +35,9 @@ K8S_DNS_IP ?= 10.3.0.10
 CIDR_VPC ?= "10.0.0.0/16"
 ETCD_IPS ?= 10.0.10.10,10.0.10.11,10.0.10.12
 
+HYPERKUBE_IMAGE = "quay.io/coreos/hyperkube"
+HYPERKUBE_TAG = "v1.4.5_coreos.0"
+
 # Alternative:
 # CIDR_PODS ?= "172.15.0.0/16"
 # CIDR_SERVICE_CLUSTER ?= "172.16.0.0/24"
@@ -53,7 +56,7 @@ DIR_SSL := .cfssl
 	@echo "${GREEN}✓ initialize add-ons - success ${NC}\n"
 
 ## generate key-pair, variables and then `terraform apply`
-all: prereqs create-keypair ssl init apply
+all: prereqs create-keypair ssl user-data init apply
 	@echo "${GREEN}✓ terraform portion of 'make all' has completed ${NC}\n"
 	@$(MAKE) wait-for-cluster
 	@$(MAKE) .addons
@@ -75,6 +78,7 @@ all: prereqs create-keypair ssl init apply
 	@echo "% make status"
 
 .cfssl: ; ./scripts/init-cfssl ${DIR_SSL} ${AWS_REGION} ${INTERNAL_TLD} ${K8S_SERVICE_IP}
+.user-data: ; ./scripts/user-data ${INTERNAL_TLD} ${HYPERKUBE_IMAGE} ${HYPERKUBE_TAG} ${K8S_DNS_IP} "cluster.local"
 
 ## destroy and remove everything
 clean: destroy delete-keypair
@@ -136,6 +140,9 @@ status: instances
 
 ## create tls artifacts
 ssl: .cfssl
+
+## create user-data
+user-data: .user-data
 
 ## smoke it
 test: test-ssl test-route53 test-etcd pods dns

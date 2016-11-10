@@ -1,5 +1,6 @@
 .addons
 .cfssl
+.user-data
 .key-pair
 .keypair
 .srl
